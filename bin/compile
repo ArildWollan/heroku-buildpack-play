@@ -13,11 +13,11 @@ BIN_DIR=$(cd $(dirname $0); pwd) # absolute path
 
 export_env_dir $ENV_DIR
 
-JVM_COMMON_BUILDPACK=${JVM_COMMON_BUILDPACK:-"https://buildpack-registry.s3.amazonaws.com/buildpacks/heroku/jvm.tgz"}
+JVM_COMMON_BUILDPACK=${JVM_COMMON_BUILDPACK:-"https://buildpack-registry.s3.dualstack.us-east-1.amazonaws.com/buildpacks/heroku/jvm.tgz"}
 mkdir -p /tmp/jvm-common
-curl --silent --location $JVM_COMMON_BUILDPACK | tar xzm -C /tmp/jvm-common --strip-components=1
-. /tmp/jvm-common/bin/util
-. /tmp/jvm-common/bin/java
+curl --silent --fail --retry 3 --retry-connrefused --connect-timeout 5 --location $JVM_COMMON_BUILDPACK | tar xzm -C /tmp/jvm-common --strip-components=1
+
+BUILDPACK_DIR=$(cd $(dirname $0) && cd .. && pwd)
 
 #create the cache dir if it doesn't exist
 mkdir -p $CACHE_DIR
@@ -28,10 +28,9 @@ if [ ! -f ${BUILD_DIR}/system.properties ]; then
 fi
 
 # install JDK
-javaVersion=$(detect_java_version ${BUILD_DIR})
-echo -n "-----> Installing OpenJDK ${javaVersion}..."
-install_java ${BUILD_DIR} ${javaVersion}
-jdk_overlay ${BUILD_DIR}
+echo -n "-----> Installing OpenJDK..."
+( source /tmp/jvm-common/bin/java && install_openjdk "${BUILD_DIR}" "${BUILDPACK_DIR}" )
+source "${BUILDPACK_DIR}/export"
 echo " done"
 
 PLAY_PATH=".play"
