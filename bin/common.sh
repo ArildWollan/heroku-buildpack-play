@@ -42,9 +42,16 @@ download_play_official() {
 
   status=$(curl --retry 3 --silent --head -w %{http_code} -L ${playUrl} -o /dev/null)
   if [ "$status" != "200" ]; then
-    error "Could not locate: ${playUrl}
+    # Try GitHub releases (play1 community fork)
+    playUrl="https://github.com/playframework/play1/releases/download/${playVersion}/${playZipFile}"
+    status=$(curl --retry 3 --silent --head -w %{http_code} -L ${playUrl} -o /dev/null)
+    if [ "$status" != "200" ]; then
+      error "Could not locate Play ${playVersion} from typesafe.com or GitHub releases.
 Please check that the version ${playVersion} is correct in your conf/dependencies.yml"
-    exit 1
+      exit 1
+    fi
+    echo "Downloading ${playZipFile} from GitHub releases" | indent
+    curl --retry 3 -s -O -L ${playUrl}
   else
     echo "Downloading ${playZipFile} from https://downloads.typesafe.com" | indent
     curl --retry 3 -s -O -L ${playUrl}
